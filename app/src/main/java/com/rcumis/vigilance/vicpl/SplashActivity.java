@@ -8,7 +8,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 
 /**
- * Created by Nagarjuna on 23/10/2016.
+ * Created by Arjun on 23/10/2016.
+ * Splash screen with logo and version name
  */
 
 public class SplashActivity extends AppCompatActivity {
@@ -18,7 +19,9 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
         TextView versionTextView = (TextView) findViewById(R.id.version_textView);
-        versionTextView.setText("Version "+BuildConfig.VERSION_NAME);
+        if (versionTextView != null) {
+            versionTextView.setText(getString(R.string.version_name,BuildConfig.VERSION_NAME));
+        }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {

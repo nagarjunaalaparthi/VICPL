@@ -221,6 +221,7 @@ public class BackgroundLocationService extends Service implements
             this.mWakeLock = null;
         }
 
+        Log.i("service","disconnected");
         super.onDestroy();
     }
     /*

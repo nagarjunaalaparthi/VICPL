@@ -2,6 +2,7 @@ package com.rcumis.vigilance.vicpl;
 
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -10,7 +11,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.net.UrlQuerySanitizer;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,7 +32,6 @@ import com.rcumis.vigilance.vicpl.location.BackgroundLocationService;
 import com.rcumis.vigilance.vicpl.network.NetworkUtils;
 import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 /**
@@ -91,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
                 }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private void initWebView() {
 
         mWebView.getSettings().setJavaScriptEnabled(true);

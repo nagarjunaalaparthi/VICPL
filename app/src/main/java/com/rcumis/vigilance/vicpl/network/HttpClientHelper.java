@@ -3,13 +3,13 @@ package com.rcumis.vigilance.vicpl.network;
 import android.content.Context;
 import android.location.Location;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -49,21 +49,21 @@ public class HttpClientHelper {
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
+                Log.i("response string",response.toString());
             }
         });
     }
 
-    public String getFormedUrl(Location location) {
-        String url = "https://vigilance.rcumis.com/location/api?email="
+    private String getFormedUrl(Location location) {
+        return "https://vigilance.rcumis.com/location/api?email="
                 + VigilancePreferenceManager.getEmailOfUser(mContext)
                 +"&lat="+location.getLatitude()
                 +"&long="+location.getLongitude()
                 +"&time="+getTime();
-        return url;
     }
 
-    public String getTime() {
-        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss_dd/MMM/yyyy");
+    private String getTime() {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
         return format.format(new Date(System.currentTimeMillis()));
     }
 }

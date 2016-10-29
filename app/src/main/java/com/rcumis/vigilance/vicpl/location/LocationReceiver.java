@@ -3,8 +3,6 @@ package com.rcumis.vigilance.vicpl.location;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.location.Location;
-import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.location.LocationResult;
@@ -16,9 +14,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 /**
- * Created by Nagarjuna on 23/10/16.
+ * Created by Arjun on 23/10/16.
+ * Receiver to handle the location data
  */
 public class LocationReceiver extends BroadcastReceiver {
 
@@ -37,16 +37,7 @@ public class LocationReceiver extends BroadcastReceiver {
         }
     }
 
-    public void onLocationChanged(Location location) {
-        // Report to the UI that the location was updated
-        String msg = Double.toString(location.getLatitude()) + "," +
-                Double.toString(location.getLongitude());
-        Log.d("debug", msg);
-        // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-        appendLog(dateFormat.format(new Date()) + " : " + msg);
-    }
-
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
     String fileName = "logs.txt";
     public void appendLog(String text) {
 
