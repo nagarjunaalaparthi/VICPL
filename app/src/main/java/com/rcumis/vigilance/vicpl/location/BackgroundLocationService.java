@@ -148,7 +148,7 @@ public class BackgroundLocationService extends Service implements
             mInProgress = true;
             mGoogleApiClient.connect();
         }
-
+        Log.d("debug", "service started");
         return START_STICKY;
     }
 
@@ -177,27 +177,27 @@ public class BackgroundLocationService extends Service implements
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     String fileName = "logs.txt";
     public void appendLog(String text) {
-
-        File logsDir = FileUtils.geLogsDirectory();
-        File logFile = new File(logsDir, fileName);
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        try {
-            //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-            buf.append(text);
-            buf.newLine();
-            buf.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+//
+//        File logsDir = FileUtils.geLogsDirectory();
+//        File logFile = new File(logsDir, fileName);
+//        if (!logFile.exists()) {
+//            try {
+//                logFile.createNewFile();
+//            } catch (IOException e) {
+//                // TODO Auto-generated catch block
+//                e.printStackTrace();
+//            }
+//        }
+//        try {
+//            //BufferedWriter for performance, true to set append to file flag
+//            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
+//            buf.append(text);
+//            buf.newLine();
+//            buf.close();
+//        } catch (IOException e) {
+//            // TODO Auto-generated catch block
+//            e.printStackTrace();
+//        }
     }
 
     @Override

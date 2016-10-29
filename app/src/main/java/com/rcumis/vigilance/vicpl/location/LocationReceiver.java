@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.location.LocationResult;
+import com.rcumis.vigilance.vicpl.network.HttpClientHelper;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -30,6 +31,8 @@ public class LocationReceiver extends BroadcastReceiver {
         if (LocationResult.hasResult(intent)) {
             LocationResult mLocationResult = LocationResult.extractResult(intent);
             Log.i("LocationReceiver", "Location Received: " + mLocationResult.toString());
+            HttpClientHelper helper = new HttpClientHelper(context);
+            helper.sendLocationToServer(mLocationResult.getLastLocation());
             appendLog(dateFormat.format(new Date()) + " : " + mLocationResult.toString());
         }
     }
