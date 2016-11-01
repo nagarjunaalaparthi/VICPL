@@ -18,12 +18,15 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
@@ -37,19 +40,22 @@ import java.net.URLDecoder;
 /**
  * Created by Nagarjuna on 23/10/2016
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener{
 
     private final int LOCATION_PERMISSION_REQUEST_CODE = 102;
     public static final int PERMISSION_STORAGE_STOPS_REQUEST_CODE = 122;
     private WebView mWebView;
     private Dialog mProgressDialog;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mWebView = (WebView) findViewById(R.id.webview);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.refresh_layout);
+        mSwipeRefreshLayout.setOnRefreshListener(this);
+        mSwipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
         if (NetworkUtils.isNetworkAvailable(this)) {
             initWebView();
         } else {
@@ -69,6 +75,9 @@ public class MainActivity extends AppCompatActivity {
     public void showProgressDialog() {
 
                 try {
+                    if (mSwipeRefreshLayout != null) {
+                        mSwipeRefreshLayout.setRefreshing(false);
+                    }
                     if (mProgressDialog == null)
                         initProgressDialog();
                     if (!mProgressDialog.isShowing())
@@ -92,12 +101,17 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void initWebView() {
-
+        mWebView = (WebView) findViewById(R.id.webview);
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
         mWebView.getSettings().setSupportMultipleWindows(true);
+        mWebView.getSettings().setLoadWithOverviewMode(true);
+        mWebView.getSettings().setUseWideViewPort(true);
+        mWebView.getSettings().setBuiltInZoomControls(true);
+        mWebView.getSettings().setDisplayZoomControls(false);
+        mWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         mWebView.setWebViewClient(new MyWebClient());
-        mWebView.setWebChromeClient(new WebChromeClient());
+        mWebView.setWebChromeClient(new MyWebChromeClient());
         mWebView.loadUrl("https://vigilance.rcumis.com");
     }
 
@@ -108,12 +122,18 @@ public class MainActivity extends AppCompatActivity {
         if (null == service){
             // something really wrong here
             Log.e("MainActivity", "Could not start service " + comp.toString());
+        } else {
+            Toast.makeText(this, "Location Service started", Toast.LENGTH_LONG ).show();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (mWebView == null){
+            initWebView();
+        }
         // Check if the permissions are already granted or not
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -156,6 +176,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRefresh() {
+        if (mWebView != null && mWebView.getUrl() != null){
+            mWebView.loadUrl(mWebView.getUrl());
+        } else {
+
+        }
+    }
+
     public class MyWebClient extends WebViewClient {
 
         @Override
@@ -178,13 +207,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (url.contains("dashboard")) {
-                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                    startLocationService();
-                }
             }
 
             if (url.contains("logout")) {
-                stopService(new Intent(MainActivity.this,BackgroundLocationService.class));
+                stopLocationService();
             }
 
             Log.i("requested URLS: ", url);
@@ -199,6 +225,32 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onLoadResource(WebView view, String url) {
+
+        }
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+            if (url != null && url.contains("verifications/changeStatus")) {
+                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
+                    startLocationService();
+                }
+            }
+            return super.shouldInterceptRequest(view, url);
+        }
+
+        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            if (request != null) {
+                Log.i("requested URLW: ", request.getUrl().toString());
+                String url = request.getUrl().toString();
+                if (url != null && url.contains("verifications/changeStatus")) {
+                    if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
+                        startLocationService();
+                    }
+                }
+            }
+            return super.shouldInterceptRequest(view, request);
         }
 
         @Override
@@ -240,6 +292,30 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceivedLoginRequest(WebView view, String realm, String account, String args) {
             super.onReceivedLoginRequest(view, realm, account, args);
+        }
+    }
+
+    private void stopLocationService() {
+        stopService(new Intent(MainActivity.this,BackgroundLocationService.class));
+    }
+
+    public class MyWebChromeClient extends WebChromeClient {
+
+        @Override
+        public void onProgressChanged(WebView view, int newProgress) {
+            super.onProgressChanged(view, newProgress);
+            if (newProgress > 75){
+                hideProgressDialog();
+            }
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mWebView != null && mWebView.canGoBack()) {
+            mWebView.goBack();
+        } else {
+            super.onBackPressed();
         }
     }
 }
