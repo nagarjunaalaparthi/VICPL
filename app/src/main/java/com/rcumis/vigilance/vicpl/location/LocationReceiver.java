@@ -33,34 +33,6 @@ public class LocationReceiver extends BroadcastReceiver {
             Log.i("LocationReceiver", "Location Received: " + mLocationResult.toString());
             HttpClientHelper helper = new HttpClientHelper(context);
             helper.sendLocationToServer(mLocationResult.getLastLocation());
-            appendLog(dateFormat.format(new Date()) + " : " + mLocationResult.toString());
         }
     }
-
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
-    String fileName = "logs.txt";
-    public void appendLog(String text) {
-
-        File logsDir = FileUtils.geLogsDirectory();
-        File logFile = new File(logsDir, fileName);
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        try {
-            //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-            buf.append(text);
-            buf.newLine();
-            buf.close();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
-
 }

@@ -144,7 +144,6 @@ public class BackgroundLocationService extends Service implements
 
         setUpLocationClientIfNeeded();
         if(!mGoogleApiClient.isConnected() || !mGoogleApiClient.isConnecting() && !mInProgress) {
-            appendLog(dateFormat.format(new Date()) + ": Started");
             mInProgress = true;
             mGoogleApiClient.connect();
         }
@@ -166,7 +165,6 @@ public class BackgroundLocationService extends Service implements
                 Double.toString(location.getLongitude()) + " -------- "+mLocationRequest.getFastestInterval()+"  -----upda: "+mLocationRequest.getInterval();
         Log.d("debug", msg);
         // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-        appendLog(dateFormat.format(new Date()) + " : " + msg);
     }
 
     @Override
@@ -174,31 +172,6 @@ public class BackgroundLocationService extends Service implements
         return mBinder;
     }
 
-    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    String fileName = "logs.txt";
-    public void appendLog(String text) {
-//
-//        File logsDir = FileUtils.geLogsDirectory();
-//        File logFile = new File(logsDir, fileName);
-//        if (!logFile.exists()) {
-//            try {
-//                logFile.createNewFile();
-//            } catch (IOException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//            }
-//        }
-//        try {
-//            //BufferedWriter for performance, true to set append to file flag
-//            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-//            buf.append(text);
-//            buf.newLine();
-//            buf.close();
-//        } catch (IOException e) {
-//            // TODO Auto-generated catch block
-//            e.printStackTrace();
-//        }
-    }
 
     @Override
     public void onDestroy() {
@@ -249,7 +222,6 @@ public class BackgroundLocationService extends Service implements
 
                     /*LocationServices.FusedLocationApi.requestLocationUpdates(this.mGoogleApiClient,
                             mLocationRequest, this);*/
-                    appendLog(dateFormat.format(new Date()) + ": Connected");
                 }
             }
         } catch (Exception ex) {
@@ -269,7 +241,6 @@ public class BackgroundLocationService extends Service implements
         mGoogleApiClient = null;
         // Display the connection status
         // Toast.makeText(this, DateFormat.getDateTimeInstance().format(new Date()) + ": Disconnected. Please re-connect.", Toast.LENGTH_SHORT).show();
-        appendLog(dateFormat.format(new Date()) + ": Disconnected");
     }
 
     /*

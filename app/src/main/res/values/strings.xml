@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Rcumis.com</string>
+    <string name="app_name">RCUMIS</string>
     <string name="continue_handler">Continue</string>
     <string name="cancel">Cancel</string>
     <string name="ssl_error">An SSL Error occured. Do you want to continue?</string>

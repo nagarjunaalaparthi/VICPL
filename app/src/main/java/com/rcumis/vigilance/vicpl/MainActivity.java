@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         } else {
             Toast.makeText(this,"No Network",Toast.LENGTH_LONG).show();
         }
+
     }
 
     private void initProgressDialog() {
@@ -163,13 +164,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                                 PERMISSION_STORAGE_STOPS_REQUEST_CODE);
                         // The callback method gets the result of the request.
                     }
-                    startLocationService();
 
                 }
                 return;
             }
             case PERMISSION_STORAGE_STOPS_REQUEST_CODE: {
-                startLocationService();
                 Toast.makeText(MainActivity.this, "Success", Toast.LENGTH_LONG).show();
             }
             break;
@@ -206,6 +205,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 Log.i("requested email",email);
             }
 
+            if (url.contains("verifications/verifSubmission")) {
+                stopLocationService();
+            }
+
             if (url.contains("dashboard")) {
             }
 
@@ -232,7 +235,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
             if (url != null && url.contains("verifications/changeStatus")) {
                 if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                    startLocationService();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            startLocationService();
+                        }
+                    });
                 }
             }
             return super.shouldInterceptRequest(view, url);
@@ -246,7 +254,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 String url = request.getUrl().toString();
                 if (url != null && url.contains("verifications/changeStatus")) {
                     if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                        startLocationService();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                startLocationService();
+                            }
+                        });
                     }
                 }
             }
@@ -296,7 +309,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     }
 
     private void stopLocationService() {
-        stopService(new Intent(MainActivity.this,BackgroundLocationService.class));
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this,"Service stopped",Toast.LENGTH_LONG).show();
+                stopService(new Intent(MainActivity.this,BackgroundLocationService.class));
+            }
+        });
     }
 
     public class MyWebChromeClient extends WebChromeClient {
