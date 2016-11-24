@@ -11,17 +11,23 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Message;
+import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.webkit.GeolocationPermissions;
 import android.webkit.SslErrorHandler;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -35,6 +41,7 @@ import com.rcumis.vigilance.vicpl.location.BackgroundLocationService;
 import com.rcumis.vigilance.vicpl.network.NetworkUtils;
 import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
 
+import java.io.File;
 import java.net.URLDecoder;
 
 /**
@@ -47,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private WebView mWebView;
     private Dialog mProgressDialog;
     private SwipeRefreshLayout mSwipeRefreshLayout;
+    private ValueCallback<Uri[]> mFilePathCallBack;
+    private Uri mCapturedImageURI;
+    public static final int FILECHOOSER_RESULTCODE = 100;
 
 
     @Override
@@ -123,8 +133,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         if (null == service){
             // something really wrong here
             Log.e("MainActivity", "Could not start service " + comp.toString());
-        } else {
-            Toast.makeText(this, "Location Service started", Toast.LENGTH_LONG ).show();
         }
     }
 
@@ -312,7 +320,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this,"Service stopped",Toast.LENGTH_LONG).show();
                 stopService(new Intent(MainActivity.this,BackgroundLocationService.class));
             }
         });
@@ -323,9 +330,75 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         @Override
         public void onProgressChanged(WebView view, int newProgress) {
             super.onProgressChanged(view, newProgress);
-            if (newProgress > 75){
+            if (newProgress > 60){
                 hideProgressDialog();
             }
+        }
+
+        @Override
+        public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+            callback.invoke(origin,true,true);
+//            super.onGeolocationPermissionsShowPrompt(origin, callback);
+        }
+
+        @Override
+        public void onGeolocationPermissionsHidePrompt() {
+            super.onGeolocationPermissionsHidePrompt();
+        }
+
+        @Override
+        public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+
+            mFilePathCallBack = filePathCallback;
+
+            try{
+
+                // Create AndroidExampleFolder at sdcard
+
+                File imageStorageDir = new File(
+                        Environment.getExternalStoragePublicDirectory(
+                                Environment.DIRECTORY_PICTURES)
+                        , "RCUMIS");
+
+                if (!imageStorageDir.exists()) {
+                    // Create AndroidExampleFolder at sdcard
+                    imageStorageDir.mkdirs();
+                }
+
+                // Create camera captured image file path and name
+                File file = new File(
+                        imageStorageDir + File.separator + "IMG_"
+                                + String.valueOf(System.currentTimeMillis())
+                                + ".jpg");
+
+                mCapturedImageURI = Uri.fromFile(file);
+
+                // Camera capture image intent
+                final Intent captureIntent = new Intent(
+                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+
+                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
+
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("image/*");
+
+                // Create file chooser intent
+                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
+
+                // Set camera intent to file chooser
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
+                        , new Parcelable[] { captureIntent });
+
+                // On select image call onActivityResult method of activity
+                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+
+            }
+            catch(Exception e){
+                Toast.makeText(getBaseContext(), "Exception:"+e,
+                        Toast.LENGTH_LONG).show();
+            }
+            return true;
         }
     }
 
@@ -335,6 +408,43 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             mWebView.goBack();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode==FILECHOOSER_RESULTCODE)
+        {
+
+            if (null == this.mFilePathCallBack) {
+                return;
+
+            }
+
+            Uri result=null;
+
+            try{
+                if (resultCode != RESULT_OK) {
+
+                    result = null;
+
+                } else {
+
+                    // retrieve from the private variable if the intent is null
+                    result = data == null ? mCapturedImageURI : data.getData();
+                }
+            }
+            catch(Exception e)
+            {
+                Toast.makeText(getApplicationContext(), "activity :"+e,
+                        Toast.LENGTH_LONG).show();
+            }
+
+            if (result != null){
+                mFilePathCallBack.onReceiveValue(new Uri[]{result});
+            }
+            mFilePathCallBack = null;
+
         }
     }
 }
