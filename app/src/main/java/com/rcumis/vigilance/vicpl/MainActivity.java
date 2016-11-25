@@ -16,6 +16,7 @@ import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.provider.MediaStore;
@@ -38,6 +39,8 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import com.rcumis.vigilance.vicpl.location.BackgroundLocationService;
+import com.rcumis.vigilance.vicpl.network.DownloadReciever;
+import com.rcumis.vigilance.vicpl.network.DownloadService;
 import com.rcumis.vigilance.vicpl.network.NetworkUtils;
 import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
 
@@ -47,7 +50,7 @@ import java.net.URLDecoder;
 /**
  * Created by Nagarjuna on 23/10/2016
  */
-public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener{
+public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, DownloadReciever.Receiver {
 
     private final int LOCATION_PERMISSION_REQUEST_CODE = 102;
     public static final int PERMISSION_STORAGE_STOPS_REQUEST_CODE = 122;
@@ -57,6 +60,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private ValueCallback<Uri[]> mFilePathCallBack;
     private Uri mCapturedImageURI;
     public static final int FILECHOOSER_RESULTCODE = 100;
+    private File storageDir;
+    private DownloadReciever mReceiver;
 
 
     @Override
@@ -66,6 +71,14 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.refresh_layout);
         mSwipeRefreshLayout.setOnRefreshListener(this);
         mSwipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
+
+        storageDir = new File(
+                Environment.getExternalStorageDirectory(), "RCUMIS");
+
+        if (!storageDir.exists()) {
+            // Create AndroidExampleFolder at sdcard
+            storageDir.mkdirs();
+        }
         if (NetworkUtils.isNetworkAvailable(this)) {
             initWebView();
         } else {
@@ -73,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
 
     }
+
 
     private void initProgressDialog() {
         if (mProgressDialog == null) {
@@ -143,6 +157,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         if (mWebView == null){
             initWebView();
         }
+
         // Check if the permissions are already granted or not
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -152,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     LOCATION_PERMISSION_REQUEST_CODE);
         }
     }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -191,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         }
     }
+
 
     public class MyWebClient extends WebViewClient {
 
@@ -236,7 +253,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         @Override
         public void onLoadResource(WebView view, String url) {
-
         }
 
         @Override
@@ -258,7 +274,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             if (request != null) {
-                Log.i("requested URLW: ", request.getUrl().toString());
                 String url = request.getUrl().toString();
                 if (url != null && url.contains("verifications/changeStatus")) {
                     if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
@@ -336,6 +351,30 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
 
         @Override
+        public void onReceivedTouchIconUrl(WebView view, String url, boolean precomposed) {
+            super.onReceivedTouchIconUrl(view, url, precomposed);
+        }
+
+        @Override
+        public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+            WebView newWebView = new WebView(view.getContext());
+            newWebView.getSettings().setJavaScriptEnabled(true);
+            newWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+            newWebView.getSettings().setSupportMultipleWindows(true);
+            newWebView.getSettings().setLoadWithOverviewMode(true);
+            newWebView.getSettings().setUseWideViewPort(true);
+            newWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+            newWebView.setWebViewClient(new PdfWebViewClient());
+            newWebView.setWebChromeClient(new MyWebChromeClient());
+            WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+            resultMsg.getData();
+            transport.setWebView(newWebView);
+            resultMsg.sendToTarget();
+            return true;
+//            return super.onCreateWindow(view, isDialog, isUserGesture, resultMsg);
+        }
+
+        @Override
         public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
             callback.invoke(origin,true,true);
 //            super.onGeolocationPermissionsShowPrompt(origin, callback);
@@ -355,19 +394,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
                 // Create AndroidExampleFolder at sdcard
 
-                File imageStorageDir = new File(
-                        Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_PICTURES)
-                        , "RCUMIS");
-
-                if (!imageStorageDir.exists()) {
-                    // Create AndroidExampleFolder at sdcard
-                    imageStorageDir.mkdirs();
-                }
 
                 // Create camera captured image file path and name
                 File file = new File(
-                        imageStorageDir + File.separator + "IMG_"
+                        storageDir + File.separator + "IMG_"
                                 + String.valueOf(System.currentTimeMillis())
                                 + ".jpg");
 
@@ -446,6 +476,55 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             mFilePathCallBack = null;
 
         }
+    }
+
+    public class PdfWebViewClient extends WebViewClient {
+
+        @Override
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+
+            super.onPageStarted(view, url, favicon);
+
+            /* Starting Download Service */
+            mReceiver = new DownloadReciever(new Handler());
+            mReceiver.setReceiver(MainActivity.this);
+            Intent intent = new Intent(Intent.ACTION_SYNC, null, MainActivity.this, DownloadService.class);
+
+/* Send optional extras to Download IntentService */
+            intent.putExtra("download_url", url);
+            intent.putExtra("receiver", mReceiver);
+            intent.putExtra("requestId", 101);
+
+            MainActivity.this.startService(intent);
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+        }
+
+    }
+
+    @Override
+    public void onReceiveResult(int resultCode, Bundle resultData) {
+        switch (resultCode) {
+            case 0:
+                Toast.makeText(MainActivity.this, "Downloading..." , Toast.LENGTH_SHORT).show();
+                break;
+
+            case 1:
+                Toast.makeText(MainActivity.this, "Downloading completed..." , Toast.LENGTH_SHORT).show();
+                break;
+
+            case 2:
+                Toast.makeText(MainActivity.this, "Download failed" , Toast.LENGTH_SHORT).show();
+                break;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 }
 

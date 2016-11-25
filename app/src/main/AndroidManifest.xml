@@ -53,6 +53,10 @@
                     android:name="com.google.android.gms.wearable.BIND_LISTENER" />
             </intent-filter>
         </service>
+
+        <service android:name="com.rcumis.vigilance.vicpl.network.DownloadService"
+            android:exported="true"
+            android:enabled="true"/>
     </application>
 
 </manifest>
