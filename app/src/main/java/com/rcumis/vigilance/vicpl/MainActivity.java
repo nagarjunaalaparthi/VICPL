@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.DownloadManager;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -16,7 +17,6 @@ import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.provider.MediaStore;
@@ -26,8 +26,11 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.SslErrorHandler;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -39,8 +42,6 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import com.rcumis.vigilance.vicpl.location.BackgroundLocationService;
-import com.rcumis.vigilance.vicpl.network.DownloadReciever;
-import com.rcumis.vigilance.vicpl.network.DownloadService;
 import com.rcumis.vigilance.vicpl.network.NetworkUtils;
 import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
 
@@ -50,7 +51,7 @@ import java.net.URLDecoder;
 /**
  * Created by Nagarjuna on 23/10/2016
  */
-public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, DownloadReciever.Receiver {
+public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, DownloadListener {
 
     private final int LOCATION_PERMISSION_REQUEST_CODE = 102;
     public static final int PERMISSION_STORAGE_STOPS_REQUEST_CODE = 122;
@@ -61,7 +62,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private Uri mCapturedImageURI;
     public static final int FILECHOOSER_RESULTCODE = 100;
     private File storageDir;
-    private DownloadReciever mReceiver;
+    private ValueCallback<Uri> mFileCallback;
 
 
     @Override
@@ -137,7 +138,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         mWebView.setWebViewClient(new MyWebClient());
         mWebView.setWebChromeClient(new MyWebChromeClient());
-        mWebView.loadUrl("https://vigilance.rcumis.com");
+        mWebView.loadUrl("https://vigilance.rcumis.com/verifications/view/Reliance%20Vendor/131");
+        mWebView.setDownloadListener(this);
     }
 
     private void startLocationService() {
@@ -206,6 +208,30 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         } else {
 
         }
+    }
+
+    @Override
+    public void onDownloadStart(String s, String s1, String s2, String s3, long l) {
+        DownloadManager.Request request = new DownloadManager.Request(
+                Uri.parse(s));
+        request.setMimeType(s2);
+        //------------------------COOKIE!!------------------------
+        String cookies = CookieManager.getInstance().getCookie(s);
+        request.addRequestHeader("cookie", cookies);
+        //------------------------COOKIE!!------------------------
+        request.addRequestHeader("User-Agent", s1);
+        request.allowScanningByMediaScanner();
+        request.setTitle(URLUtil.guessFileName(s, null, null));
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED); //Notify client once download is completed!
+//        request.setDestinationInExternalFilesDir(this, Environment.getExternalStorageDirectory().getAbsolutePath(),getString(R.string.app_name));
+        request.setDestinationUri(Uri.fromFile(new File(Environment.getExternalStorageDirectory()+"/RCUMIS/"+URLUtil.guessFileName(s, null, null))));
+        DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        dm.enqueue(request);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT); //This is important!
+        intent.addCategory(Intent.CATEGORY_OPENABLE); //CATEGORY.OPENABLE
+        intent.setType("*/*");//any application,any extension
+        Toast.makeText(getApplicationContext(), "Downloading File", //To notify the Client that the file is being downloaded
+                Toast.LENGTH_LONG).show();
     }
 
 
@@ -325,6 +351,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             builder.show();
         }
 
+
         @Override
         public void onReceivedLoginRequest(WebView view, String realm, String account, String args) {
             super.onReceivedLoginRequest(view, realm, account, args);
@@ -385,50 +412,58 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             super.onGeolocationPermissionsHidePrompt();
         }
 
+        public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
+            mFileCallback = uploadMsg;
+            startChooser();
+        }
+
         @Override
         public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
 
             mFilePathCallBack = filePathCallback;
 
-            try{
-
-                // Create AndroidExampleFolder at sdcard
-
-
-                // Create camera captured image file path and name
-                File file = new File(
-                        storageDir + File.separator + "IMG_"
-                                + String.valueOf(System.currentTimeMillis())
-                                + ".jpg");
-
-                mCapturedImageURI = Uri.fromFile(file);
-
-                // Camera capture image intent
-                final Intent captureIntent = new Intent(
-                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-
-                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
-
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("image/*");
-
-                // Create file chooser intent
-                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
-
-                // Set camera intent to file chooser
-                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
-                        , new Parcelable[] { captureIntent });
-
-                // On select image call onActivityResult method of activity
-                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
-
-            }
-            catch(Exception e){
-                Toast.makeText(getBaseContext(), "Exception:"+e,
-                        Toast.LENGTH_LONG).show();
-            }
+           startChooser();
             return true;
+        }
+    }
+
+    private void startChooser() {
+        try{
+
+            // Create AndroidExampleFolder at sdcard
+
+
+            // Create camera captured image file path and name
+            File file = new File(
+                    storageDir + File.separator + "IMG_"
+                            + String.valueOf(System.currentTimeMillis())
+                            + ".jpg");
+
+            mCapturedImageURI = Uri.fromFile(file);
+
+            // Camera capture image intent
+            final Intent captureIntent = new Intent(
+                    android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+
+            captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
+            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+            i.addCategory(Intent.CATEGORY_OPENABLE);
+            i.setType("image/*");
+
+            // Create file chooser intent
+            Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
+
+            // Set camera intent to file chooser
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
+                    , new Parcelable[] { captureIntent });
+
+            // On select image call onActivityResult method of activity
+            startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+
+        }
+        catch(Exception e){
+            Toast.makeText(getBaseContext(), "Exception:"+e,
+                    Toast.LENGTH_LONG).show();
         }
     }
 
@@ -472,6 +507,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
             if (result != null){
                 mFilePathCallBack.onReceiveValue(new Uri[]{result});
+                mFileCallback.onReceiveValue(result);
+            } else {
+                mFilePathCallBack.onReceiveValue(null);
+                mFileCallback.onReceiveValue(null);
             }
             mFilePathCallBack = null;
 
@@ -484,19 +523,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
 
             super.onPageStarted(view, url, favicon);
-
-            /* Starting Download Service */
-            mReceiver = new DownloadReciever(new Handler());
-            mReceiver.setReceiver(MainActivity.this);
-            Intent intent = new Intent(Intent.ACTION_SYNC, null, MainActivity.this, DownloadService.class);
-
-/* Send optional extras to Download IntentService */
-            intent.putExtra("download_url", url);
-            intent.putExtra("receiver", mReceiver);
-            intent.putExtra("requestId", 101);
-
-            MainActivity.this.startService(intent);
+            mWebView.loadUrl(url);
         }
+
 
         @Override
         public void onPageFinished(WebView view, String url) {
@@ -505,22 +534,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     }
 
-    @Override
-    public void onReceiveResult(int resultCode, Bundle resultData) {
-        switch (resultCode) {
-            case 0:
-                Toast.makeText(MainActivity.this, "Downloading..." , Toast.LENGTH_SHORT).show();
-                break;
-
-            case 1:
-                Toast.makeText(MainActivity.this, "Downloading completed..." , Toast.LENGTH_SHORT).show();
-                break;
-
-            case 2:
-                Toast.makeText(MainActivity.this, "Download failed" , Toast.LENGTH_SHORT).show();
-                break;
-        }
-    }
 
     @Override
     protected void onDestroy() {
