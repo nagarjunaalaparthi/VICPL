@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         mWebView.setWebViewClient(new MyWebClient());
         mWebView.setWebChromeClient(new MyWebChromeClient());
-        mWebView.loadUrl("https://vigilance.rcumis.com/verifications/view/Reliance%20Vendor/131");
+        mWebView.loadUrl("https://vigilance.rcumis.com");
         mWebView.setDownloadListener(this);
     }
 
@@ -507,10 +507,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
             if (result != null){
                 mFilePathCallBack.onReceiveValue(new Uri[]{result});
-                mFileCallback.onReceiveValue(result);
             } else {
                 mFilePathCallBack.onReceiveValue(null);
-                mFileCallback.onReceiveValue(null);
             }
             mFilePathCallBack = null;
 
