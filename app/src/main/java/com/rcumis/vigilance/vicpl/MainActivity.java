@@ -29,6 +29,8 @@ import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
 import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
@@ -401,6 +403,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 //            return super.onCreateWindow(view, isDialog, isUserGesture, resultMsg);
         }
 
+
         @Override
         public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
             callback.invoke(origin,true,true);
@@ -410,6 +413,19 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         @Override
         public void onGeolocationPermissionsHidePrompt() {
             super.onGeolocationPermissionsHidePrompt();
+        }
+
+        //For Android 4.1 only
+        protected void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture)
+        {
+            mFileCallback = uploadMsg;
+            startChooser();
+        }
+
+        protected void openFileChooser(ValueCallback<Uri> uploadMsg)
+        {
+            mFileCallback = uploadMsg;
+            startChooser();
         }
 
         public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
@@ -424,6 +440,30 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
            startChooser();
             return true;
+        }
+
+        @Override
+        public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+            Log.i("url_js_confirm",message+" url : "+url);
+            return super.onJsConfirm(view, url, message, result);
+        }
+
+        @Override
+        public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+            Log.i("url_js_Alert",message+" url : "+url);
+            return super.onJsAlert(view, url, message, result);
+        }
+
+        @Override
+        public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
+            Log.i("url_js_prompt",message+" url : "+url);
+            return super.onJsPrompt(view, url, message, defaultValue, result);
+        }
+
+        @Override
+        public boolean onJsBeforeUnload(WebView view, String url, String message, JsResult result) {
+            Log.i("url_js_unload",message+" url : "+url);
+            return super.onJsBeforeUnload(view, url, message, result);
         }
     }
 
