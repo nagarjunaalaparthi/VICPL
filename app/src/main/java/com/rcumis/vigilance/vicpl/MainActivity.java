@@ -546,11 +546,22 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             }
 
             if (result != null){
-                mFilePathCallBack.onReceiveValue(new Uri[]{result});
+                if (mFilePathCallBack != null) {
+                    mFilePathCallBack.onReceiveValue(new Uri[]{result});
+                }
+                if (mFileCallback != null) {
+                    mFileCallback.onReceiveValue(result);
+                }
             } else {
-                mFilePathCallBack.onReceiveValue(null);
+                if (mFilePathCallBack != null) {
+                    mFilePathCallBack.onReceiveValue(null);
+                }
+                if (mFileCallback != null) {
+                    mFileCallback.onReceiveValue(null);
+                }
             }
             mFilePathCallBack = null;
+            mFileCallback = null;
 
         }
     }
