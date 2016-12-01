@@ -31,6 +31,7 @@ import android.webkit.DownloadListener;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.MimeTypeMap;
 import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
@@ -137,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mWebView.getSettings().setUseWideViewPort(true);
         mWebView.getSettings().setBuiltInZoomControls(true);
         mWebView.getSettings().setDisplayZoomControls(false);
+        mWebView.getSettings().setGeolocationEnabled(true);
         mWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         mWebView.setWebViewClient(new MyWebClient());
         mWebView.setWebChromeClient(new MyWebChromeClient());
@@ -227,6 +229,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED); //Notify client once download is completed!
 //        request.setDestinationInExternalFilesDir(this, Environment.getExternalStorageDirectory().getAbsolutePath(),getString(R.string.app_name));
         request.setDestinationUri(Uri.fromFile(new File(Environment.getExternalStorageDirectory()+"/RCUMIS/"+URLUtil.guessFileName(s, null, null))));
+        if(s.lastIndexOf(".") != -1) {
+            String ext = s.substring(s.lastIndexOf(".")+1);
+            MimeTypeMap mime = MimeTypeMap.getSingleton();
+            String type = mime.getMimeTypeFromExtension(ext);
+            request.setMimeType(type);
+        }
         DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         dm.enqueue(request);
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT); //This is important!
