@@ -4,4 +4,6 @@
     <string name="cancel">Cancel</string>
     <string name="ssl_error">An SSL Error occured. Do you want to continue?</string>
     <string name="version_name">Version %1$s</string>
+    <string name="gps_network_not_enabled">Location need to be enabled to run this application. Please enable the location!!</string>
+    <string name="open_location_settings">Open Settings</string>
 </resources>
