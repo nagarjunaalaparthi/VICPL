@@ -42,6 +42,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.rcumis.vigilance.vicpl.location.BackgroundLocationService;
@@ -99,6 +100,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mProgressDialog.setContentView(R.layout.progress_bar);
         mProgressDialog.setCancelable(false);
         mProgressDialog.setCanceledOnTouchOutside(false);
+
     }
 
     public void showProgressDialog() {
@@ -263,6 +265,15 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 if (email != null && email.length() > 0) {
                     VigilancePreferenceManager.setEmialOfuser(MainActivity.this, email);
                 }
+
+                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            startLocationService();
+                        }
+                    });
+                }
                 Log.i("requested email",email);
             }
 
@@ -293,35 +304,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-            if (url != null && url.contains("verifications/changeStatus")) {
-                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            startLocationService();
-                        }
-                    });
-                }
-            }
             return super.shouldInterceptRequest(view, url);
         }
 
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-            if (request != null) {
-                String url = request.getUrl().toString();
-                if (url != null && url.contains("verifications/changeStatus")) {
-                    if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                startLocationService();
-                            }
-                        });
-                    }
-                }
-            }
             return super.shouldInterceptRequest(view, request);
         }
 
@@ -382,7 +370,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         @Override
         public void onProgressChanged(WebView view, int newProgress) {
             super.onProgressChanged(view, newProgress);
-            if (newProgress > 60){
+            mProgressBar.setProgress(newProgress);
+            if (newProgress > 50){
                 hideProgressDialog();
             }
         }
