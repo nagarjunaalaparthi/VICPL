@@ -271,22 +271,22 @@ public class BackgroundLocationService extends Service implements
 
             if(intent!=null && intent.getExtras()!=null){
                 int priority = LocationRequest.PRIORITY_HIGH_ACCURACY;
-                if(intent.getExtras().containsKey("accuracy")){
-                    priority = intent.getExtras().getInt("accuracy");
-                }
+//                if(intent.getExtras().containsKey("accuracy")){
+//                    priority = intent.getExtras().getInt("accuracy");
+//                }
                 if(mLocationRequest==null) {
                     mLocationRequest = LocationRequest.create();
                 }
                 mLocationRequest.setPriority(priority);
-                if(priority == LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY){
-                    mLocationRequest.setInterval(60*1000);
-                    // Set the fastest update interval to 1 second
-                    mLocationRequest.setFastestInterval(60*1000);
-                }else if(priority == LocationRequest.PRIORITY_HIGH_ACCURACY){
+//                if(priority == LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY){
+//                    mLocationRequest.setInterval(60*1000);
+//                    // Set the fastest update interval to 1 second
+//                    mLocationRequest.setFastestInterval(60*1000);
+//                }else if(priority == LocationRequest.PRIORITY_HIGH_ACCURACY){
                     mLocationRequest.setInterval(Constants.UPDATE_INTERVAL);
                     // Set the fastest update interval to 1 second
                     mLocationRequest.setFastestInterval(Constants.FASTEST_INTERVAL);
-                }
+//                }
                 Intent locintent = new Intent(BackgroundLocationService.this, LocationReceiver.class);
                 PendingIntent locationIntent = PendingIntent.getBroadcast(getApplicationContext(), 14872, locintent, PendingIntent.FLAG_CANCEL_CURRENT);
                 LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,

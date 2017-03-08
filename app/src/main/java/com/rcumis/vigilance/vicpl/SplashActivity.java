@@ -7,6 +7,8 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 
+import com.rcumis.vigilance.vicpl.utils.VigilancePreferenceManager;
+
 /**
  * Created by Arjun on 23/10/2016.
  * Splash screen with logo and version name
@@ -22,6 +24,7 @@ public class SplashActivity extends AppCompatActivity {
         if (versionTextView != null) {
             versionTextView.setText(getString(R.string.version_name,BuildConfig.VERSION_NAME));
         }
+        VigilancePreferenceManager.setLaunchedTime(this, System.currentTimeMillis());
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {

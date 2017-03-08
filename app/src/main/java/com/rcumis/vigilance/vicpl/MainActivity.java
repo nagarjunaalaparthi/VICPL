@@ -7,6 +7,7 @@ import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DownloadManager;
+import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -66,11 +67,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private ValueCallback<Uri[]> mFilePathCallBack;
     private Uri mCapturedImageURI;
-    public static final int FILECHOOSER_RESULTCODE = 100;
+    public static final int FILE_CHOOSER_RESULT_CODE = 100;
     private File storageDir;
     private ValueCallback<Uri> mFileCallback;
     private boolean locationNeedToStart = false;
 
+    private String MAIN_URL = "https://vigilance.rcumis.com/";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
 
     }
-
 
     private void initProgressDialog() {
         if (mProgressDialog == null) {
@@ -146,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mWebView.getSettings().setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         mWebView.setWebViewClient(new MyWebClient());
         mWebView.setWebChromeClient(new MyWebChromeClient());
-        mWebView.loadUrl("https://vigilance.rcumis.com");
+        mWebView.loadUrl(MAIN_URL);
         mWebView.setDownloadListener(this);
     }
 
@@ -170,7 +171,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             initWebView();
         }
         checkIsLocationIsEnabled();
-        checkForPermissions();
+        checkAndStartService();
+
     }
 
     public boolean checkIsLocationIsEnabled() {
@@ -242,9 +244,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 }
                 return;
             }
-            case PERMISSION_STORAGE_STOPS_REQUEST_CODE: {
-                Toast.makeText(MainActivity.this, "Success", Toast.LENGTH_LONG).show();
-            }
+            case PERMISSION_STORAGE_STOPS_REQUEST_CODE:
             break;
         }
     }
@@ -305,16 +305,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 String[] emailArray = urlEncoded.split("/");
                 String email = emailArray[emailArray.length-1];
                 if (email != null && email.length() > 0) {
-                    VigilancePreferenceManager.setEmialOfuser(MainActivity.this, email);
-                }
-
-                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            startLocationService();
-                        }
-                    });
+                    VigilancePreferenceManager.setEmailOfuser(MainActivity.this, email);
+                    checkAndStartService();
                 }
                 Log.i("requested email",email);
             }
@@ -338,6 +330,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             super.onPageFinished(view, url);
             hideProgressDialog();
             Log.i("requested URLF: ", url);
+
+            if (url.equals(MAIN_URL)) {
+                VigilancePreferenceManager.clear(MainActivity.this);
+                stopLocationService();
+            }
         }
 
         @Override
@@ -346,12 +343,17 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+//            checkAndStartService(url);
             return super.shouldInterceptRequest(view, url);
         }
 
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+//            if (request != null) {
+//                String url = request.getUrl().toString();
+//                checkAndStartService(url);
+//            }
             return super.shouldInterceptRequest(view, request);
         }
 
@@ -398,6 +400,27 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
     }
 
+    private void checkAndStartService() {
+//        if (url != null && url.contains("verifications/changeStatus")) {
+//            Calendar past = Calendar.getInstance();
+//            past.setTimeInMillis(VigilancePreferenceManager.getLaunchedTime(this));
+//
+//            if (past.before(Calendar.getInstance())) {
+                if (VigilancePreferenceManager.getEmailOfUser(MainActivity.this).length() > 0){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            locationNeedToStart = true;
+                            if (checkForPermissions()) {
+                                startLocationService();
+                            }
+                        }
+                    });
+//                }
+//            }
+        }
+    }
+
     private void stopLocationService() {
         locationNeedToStart = false;
         runOnUiThread(new Runnable() {
@@ -413,7 +436,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         @Override
         public void onProgressChanged(WebView view, int newProgress) {
             super.onProgressChanged(view, newProgress);
-            mProgressBar.setProgress(newProgress);
             if (newProgress > 50){
                 hideProgressDialog();
             }
@@ -446,7 +468,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         @Override
         public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-            callback.invoke(origin,true,true);
+            callback.invoke(origin, true, false);
 //            super.onGeolocationPermissionsShowPrompt(origin, callback);
         }
 
@@ -526,19 +548,23 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
 
             captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
+
             Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            }
             i.addCategory(Intent.CATEGORY_OPENABLE);
-            i.setType("image/*");
+            i.setType("*/*");
 
             // Create file chooser intent
-            Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
+            Intent chooserIntent = Intent.createChooser(i, "Upload Documents");
 
             // Set camera intent to file chooser
             chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
                     , new Parcelable[] { captureIntent });
 
             // On select image call onActivityResult method of activity
-            startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+            startActivityForResult(chooserIntent, FILE_CHOOSER_RESULT_CODE);
 
         }
         catch(Exception e){
@@ -565,7 +591,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             }
         }
 
-        if(requestCode==FILECHOOSER_RESULTCODE)
+        if(requestCode== FILE_CHOOSER_RESULT_CODE)
         {
 
             if (null == this.mFilePathCallBack) {
@@ -573,7 +599,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
             }
 
-            Uri result=null;
+            Uri[] result = null;
 
             try{
                 if (resultCode != RESULT_OK) {
@@ -583,7 +609,19 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 } else {
 
                     // retrieve from the private variable if the intent is null
-                    result = data == null ? mCapturedImageURI : data.getData();
+                    if (data == null) {
+                        result = new Uri[1];
+                        result[0] = mCapturedImageURI;
+                    } else if (data.getData() != null) {
+                        result = new Uri[1];
+                        result[0] = data.getData();
+                    } else if (data.getClipData() != null) {
+                        ClipData clipData = data.getClipData();
+                        result = new Uri[clipData.getItemCount()];
+                        for (int i = 0; i < clipData.getItemCount(); i++) {
+                            result[i] = clipData.getItemAt(i).getUri();
+                        }
+                    }
                 }
             }
             catch(Exception e)
@@ -592,12 +630,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                         Toast.LENGTH_LONG).show();
             }
 
-            if (result != null){
+            if (result != null && result.length > 0){
                 if (mFilePathCallBack != null) {
-                    mFilePathCallBack.onReceiveValue(new Uri[]{result});
+                    mFilePathCallBack.onReceiveValue(result);
                 }
                 if (mFileCallback != null) {
-                    mFileCallback.onReceiveValue(result);
+                    mFileCallback.onReceiveValue(result[0]);
                 }
             } else {
                 if (mFilePathCallBack != null) {

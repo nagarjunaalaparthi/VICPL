@@ -15,8 +15,9 @@ public class VigilancePreferenceManager {
     static SharedPreferences prefs;
 
     private static String EMAIL = "E-mail";
+    private static String TIME = "time";
 
-    public static void setEmialOfuser(Context context, String email) {
+    public static void setEmailOfuser(Context context, String email) {
         if (context != null) {
             getSharedPreference(context).edit().putString(EMAIL, email).apply();
         }
@@ -29,9 +30,22 @@ public class VigilancePreferenceManager {
         return "";
     }
 
+    public static void setLaunchedTime(Context context, long time) {
+        if (context != null) {
+            getSharedPreference(context).edit().putLong(TIME, time).apply();
+        }
+    }
+
+    public static long getLaunchedTime(Context context) {
+        if (context != null) {
+            return  getSharedPreference(context).getLong(TIME, System.currentTimeMillis());
+        }
+        return System.currentTimeMillis();
+    }
+
     public static void clear(Context context) {
         if (context != null) {
-            getSharedPreference(context).edit().clear().commit();
+            getSharedPreference(context).edit().clear().apply();
         }
     }
 
